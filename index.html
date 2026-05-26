@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM — Metas Troca de Óleo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #F5F3EE; --surface: #FFF; --surface2: #EDEAE3; --border: #D8D4CB;
+  --text: #1A1916; --muted: #7A776F; --accent: #C8521A; --accent-dark: #9E3D10;
+  --accent-light: #FAE8DC; --green: #2E7D32; --green-light: #E8F5E9;
+  --amber: #B45309; --amber-light: #FEF3C7; --red: #B91C1C; --red-light: #FEE2E2;
+  --blue: #1E40AF; --blue-light: #DBEAFE; --r: 10px; --rs: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* LOADING */
+#loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+#loading-overlay.hidden { display: none; }
+.loading-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--muted); }
+
+/* LOGIN */
+#login-screen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100; align-items: center; justify-content: center; }
+#login-screen.visible { display: flex; }
+.login-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 36px 32px; width: 100%; max-width: 380px; }
+.login-logo-text { font-size: 18px; font-weight: 600; margin-bottom: 28px; display: flex; align-items: center; gap: 10px; }
+.login-logo-text span { background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-family: 'DM Mono', monospace; }
+.login-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.login-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.login-group label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.03em; }
+.login-group input { font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--rs); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+.login-group input:focus { border-color: var(--accent); }
+.login-btn { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; padding: 11px; border-radius: var(--rs); background: var(--accent); color: #fff; border: none; cursor: pointer; margin-top: 8px; transition: background 0.15s; }
+.login-btn:hover { background: var(--accent-dark); }
+.login-err { font-size: 13px; color: var(--red); background: var(--red-light); padding: 8px 12px; border-radius: var(--rs); margin-top: 12px; display: none; }
+.login-err.visible { display: block; }
+
+/* APP */
+#app { display: none; }
+#app.visible { display: block; }
+.header { background: var(--text); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.logo { font-size: 15px; font-weight: 600; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
+.logo span { background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-family: 'DM Mono', monospace; }
+.hright { display: flex; align-items: center; gap: 12px; }
+.hdate { font-size: 13px; color: rgba(255,255,255,.5); font-family: 'DM Mono', monospace; }
+.sync-ind { font-size: 11px; font-family: 'DM Mono', monospace; padding: 3px 8px; border-radius: 4px; }
+.sync-ind.ok { background: rgba(46,125,50,0.3); color: #81C784; }
+.sync-ind.saving { background: rgba(180,83,9,0.3); color: #FCD34D; }
+.sync-ind.error { background: rgba(185,28,28,0.3); color: #F87171; }
+.logout-btn { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 4px 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer; transition: background 0.15s; }
+.logout-btn:hover { background: rgba(255,255,255,0.2); }
+.nav { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; overflow-x: auto; }
+.nb { padding: 13px 16px; font-size: 14px; font-family: 'DM Sans', sans-serif; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; margin-bottom: -1px; transition: color .15s; }
+.nb.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+.nb:hover:not(.active) { color: var(--text); }
+.main { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+.sec { display: none; }
+.sec.active { display: block; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+.metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+.mlabel { font-size: 11px; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px; }
+.mval { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.mval.green { color: var(--green); } .mval.amber { color: var(--amber); } .mval.red { color: var(--red); } .mval.blue { color: var(--blue); }
+.msub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 22px; margin-bottom: 16px; }
+.card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; font-family: 'DM Mono', monospace; display: inline-block; }
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-red { background: var(--red-light); color: var(--red); }
+.badge-amber { background: var(--amber-light); color: var(--amber); }
+.badge-blue { background: var(--blue-light); color: var(--blue); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 10px 10px; border-bottom: .5px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: var(--surface2); }
+.btn { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: var(--rs); cursor: pointer; border: 1px solid transparent; transition: all .15s; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent-dark); }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-ghost { background: none; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--surface2); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.fg { display: flex; flex-direction: column; gap: 5px; }
+.fg label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .03em; }
+.fg input, .fg select { font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--rs); background: var(--surface); color: var(--text); outline: none; transition: border-color .15s; }
+.fg input:focus, .fg select:focus { border-color: var(--accent); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.full { grid-column: 1/-1; }
+.msg { font-size: 13px; padding: 8px 12px; border-radius: var(--rs); margin-top: 10px; }
+.msg.ok { background: var(--green-light); color: var(--green); }
+.msg.err { background: var(--red-light); color: var(--red); }
+.section-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--accent-dark); flex-shrink: 0; }
+.hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.chip { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--surface2); color: var(--muted); display: inline-block; }
+@media (max-width: 640px) {
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .full { grid-column: 1; }
+  .main { padding: 16px 12px; }
+  .login-box { margin: 20px; padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Carregando...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo-text">ACM <span>METAS</span></div>
+    <div class="login-title">Acesso ao sistema</div>
+    <div class="login-sub">Entre com suas credenciais para continuar.</div>
+    <div class="login-group">
+      <label>E-MAIL</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" />
+    </div>
+    <div class="login-group">
+      <label>SENHA</label>
+      <input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter') fazerLogin()" />
+    </div>
+    <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-err" id="login-err">E-mail ou senha incorretos.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+<div class="header">
+  <div class="logo">ACM <span>METAS</span></div>
+  <div class="hright">
+    <span class="sync-ind ok" id="sync-ind">✓ salvo</span>
+    <div class="hdate" id="hdate"></div>
+    <button class="logout-btn" onclick="fazerLogout()">Sair</button>
+  </div>
+</div>
+<nav class="nav">
+  <button class="nb active" onclick="showTab('dash')" id="tab-dash-btn">📊 Dashboard</button>
+  <button class="nb" onclick="showTab('lancamento')" id="tab-lancamento-btn">✏️ Lançamento diário</button>
+  <button class="nb" onclick="showTab('historico')" id="tab-historico-btn">📅 Mês a mês</button>
+  <button class="nb" onclick="showTab('config')" id="tab-config-btn">⚙️ Configurações</button>
+</nav>
+
+<div class="main">
+
+<div id="sec-dash" class="sec active">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div class="section-title" style="margin:0">Acompanhamento do mês</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:13px;color:var(--muted)">Mês:</label>
+      <select id="dash-mes" onchange="renderDash()" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);outline:none;"></select>
+    </div>
+  </div>
+  <div class="metrics" id="dash-metrics"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card" style="padding:16px 18px;"><div style="font-size:13px;font-weight:600;margin-bottom:12px;">Meta do posto</div><div id="posto-prog"></div></div>
+    <div class="card" style="padding:16px 18px;"><div style="font-size:13px;font-weight:600;margin-bottom:12px;">Meta da equipe</div><div id="equipe-prog"></div></div>
+  </div>
+  <div class="card"><div class="card-title">Desempenho individual — frentistas</div><table class="tbl" id="dash-frentistas"></table></div>
+  <div class="card" style="margin-top:16px;"><div class="card-title">Evolução acumulada no mês</div><div style="position:relative;width:100%;height:220px;"><canvas id="chart-acum"></canvas></div></div>
+</div>
+
+<div id="sec-lancamento" class="sec">
+  <div class="card">
+    <div class="card-title">Lançar trocas do dia</div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="fg"><label>MÊS</label><select id="l-mes" onchange="renderLancForm()" style="font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);outline:none;"></select></div>
+      <div class="fg"><label>DATA *</label><input type="date" id="l-data" /></div>
+    </div>
+    <div id="l-frentistas-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;"></div>
+    <div class="grid2">
+      <div class="fg"><label>OUTRAS ORIGENS (indicação, redes sociais, etc.)</label><input type="number" id="l-outras" min="0" value="0" /></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-primary" onclick="salvarLancamento()">✓ Salvar lançamento</button>
+      <button class="btn btn-ghost" onclick="limparLanc()">Limpar</button>
+    </div>
+    <div id="l-msg"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="l-resumo-title">Lançamentos do mês</div>
+    <div style="overflow-x:auto;"><table class="tbl" id="l-tabela"></table></div>
+  </div>
+</div>
+
+<div id="sec-historico" class="sec">
+  <div class="card"><div class="card-title">Evolução mensal — posto e equipe</div><div style="overflow-x:auto;"><table class="tbl" id="hist-posto"></table></div></div>
+  <div class="card" style="margin-top:16px;"><div class="card-title">Evolução mensal — frentistas individuais</div><div style="overflow-x:auto;"><table class="tbl" id="hist-frent"></table></div></div>
+  <div class="card" style="margin-top:16px;"><div class="card-title">Gráfico mensal — total do posto</div><div style="position:relative;width:100%;height:260px;"><canvas id="chart-hist"></canvas></div></div>
+</div>
+
+<div id="sec-config" class="sec">
+  <div class="card">
+    <div class="card-title">Frentistas</div>
+    <div id="conf-frentistas-list" style="margin-bottom:16px;"></div>
+    <div class="hr"></div>
+    <div style="font-size:14px;font-weight:500;margin-bottom:10px;">Adicionar frentista</div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="novo-frent-nome" placeholder="Nome do frentista" style="flex:1;font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);outline:none;" />
+      <button class="btn btn-primary" onclick="addFrentista()">Adicionar</button>
+    </div>
+    <div id="conf-frent-msg" style="margin-top:8px;font-size:13px;"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Metas mensais</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Defina a meta do posto e de cada frentista por mês.</div>
+    <div style="overflow-x:auto;"><table class="tbl" id="conf-metas-tbl"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Adicionar mês</div>
+    <div class="grid2">
+      <div class="fg"><label>ANO</label><input type="number" id="novo-mes-ano" min="2024" max="2030" /></div>
+      <div class="fg"><label>MÊS</label>
+        <select id="novo-mes-num" style="font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--surface);color:var(--text);outline:none;">
+          <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
+          <option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option>
+          <option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option>
+          <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="adicionarMes()">Adicionar mês</button>
+    <div id="novo-mes-msg" style="margin-top:8px;font-size:13px;"></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9pJPppo2_-CFuoGYDkUAIATRqhfb_gDU",
+  authDomain: "acm-crm-d20a4.firebaseapp.com",
+  projectId: "acm-crm-d20a4",
+  storageBucket: "acm-crm-d20a4.firebasestorage.app",
+  messagingSenderId: "119604708875",
+  appId: "1:119604708875:web:90acd436e09784c2ee290e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db_fs = getFirestore(app);
+const auth = getAuth(app);
+
+const MESES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function mesKey(ano, mes) { return `${ano}-${String(mes).padStart(2,'0')}`; }
+function mesLabel(key) { const [y,m] = key.split('-'); return `${MESES_NOMES[+m-1]} ${y}`; }
+
+let state = {};
+let chartAcum = null, chartHist = null;
+
+function defaultState() {
+  const hoje = new Date(), ano = hoje.getFullYear();
+  return {
+    frentistas: [
+      {id:'1',nome:'Edson',ativo:true},{id:'2',nome:'Nelson',ativo:true},{id:'3',nome:'Alex',ativo:true},
+      {id:'4',nome:'Michel',ativo:true},{id:'5',nome:'Edi',ativo:true},{id:'6',nome:'Cris',ativo:true},{id:'7',nome:'Alcemiro',ativo:true}
+    ],
+    metas: {
+      [`${ano}-05`]:{posto:160,frentistas:{1:10,2:10,3:10,4:10,5:10,6:10,7:10}},
+      [`${ano}-06`]:{posto:140,frentistas:{1:10,2:10,3:10,4:10,5:10,6:10,7:10}},
+      [`${ano}-07`]:{posto:150,frentistas:{1:10,2:10,3:10,4:10,5:10,6:10,7:10}},
+      [`${ano}-08`]:{posto:160,frentistas:{1:10,2:10,3:10,4:10,5:10,6:10,7:10}},
+      [`${ano}-09`]:{posto:170,frentistas:{1:13,2:13,3:13,4:13,5:13,6:13,7:13}},
+      [`${ano}-10`]:{posto:180,frentistas:{1:13,2:13,3:13,4:13,5:13,6:13,7:13}},
+      [`${ano}-11`]:{posto:190,frentistas:{1:13,2:13,3:13,4:13,5:13,6:13,7:13}},
+      [`${ano}-12`]:{posto:200,frentistas:{1:15,2:15,3:15,4:15,5:15,6:15,7:15}}
+    },
+    lancamentos: {}
+  };
+}
+
+// ─── SYNC ─────────────────────────────────────────────────────────────────────
+function setSyncStatus(s, t) { const el=document.getElementById('sync-ind'); el.className='sync-ind '+s; el.textContent=t; }
+
+async function loadState() {
+  try {
+    const snap = await getDoc(doc(db_fs, 'metas', 'state'));
+    state = snap.exists() ? snap.data() : defaultState();
+  } catch(e) { state = defaultState(); }
+}
+
+async function saveState() {
+  setSyncStatus('saving','⟳ salvando...');
+  try {
+    await setDoc(doc(db_fs, 'metas', 'state'), state);
+    setSyncStatus('ok','✓ salvo');
+  } catch(e) { setSyncStatus('error','✗ erro ao salvar'); }
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    document.getElementById('login-screen').classList.remove('visible');
+    await loadState();
+    document.getElementById('hdate').textContent = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+    document.getElementById('l-data').value = new Date().toISOString().split('T')[0];
+    const hoje = new Date();
+    document.getElementById('novo-mes-ano').value = hoje.getFullYear();
+    document.getElementById('novo-mes-num').value = String(hoje.getMonth()+1).padStart(2,'0');
+    populateMesSelects();
+    renderDash();
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('loading-overlay').classList.add('hidden');
+  } else {
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('login-screen').classList.add('visible');
+    document.getElementById('loading-overlay').classList.add('hidden');
+  }
+});
+
+window.fazerLogin = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  document.getElementById('login-err').classList.remove('visible');
+  try { await signInWithEmailAndPassword(auth, email, senha); }
+  catch(e) { document.getElementById('login-err').classList.add('visible'); }
+}
+
+window.fazerLogout = async function() { await signOut(auth); }
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function getMeses() { return Array.from(new Set([...Object.keys(state.metas||{}), ...Object.keys(state.lancamentos||{})])).sort(); }
+function getMesAtual() { const h=new Date(); return mesKey(h.getFullYear(),h.getMonth()+1); }
+function getAtivos() { return (state.frentistas||[]).filter(f=>f.ativo); }
+function getLancMes(mk) { return (state.lancamentos||{})[mk] || {}; }
+
+function calcMes(mk) {
+  const lancs=getLancMes(mk), meta=(state.metas||{})[mk]||{posto:0,frentistas:{}};
+  let totalFrent=0, totalOutras=0; const porFrent={};
+  (state.frentistas||[]).forEach(f=>{porFrent[f.id]=0;});
+  Object.values(lancs).forEach(dia=>{
+    totalOutras+=(dia.outras||0);
+    (state.frentistas||[]).forEach(f=>{const v=dia.frentistas?.[f.id]||0;porFrent[f.id]+=v;totalFrent+=v;});
+  });
+  const totalPosto=totalFrent+totalOutras;
+  const metaEquipe=Object.values(meta.frentistas||{}).reduce((a,b)=>a+b,0);
+  const pcPosto=meta.posto>0?Math.round(totalPosto/meta.posto*100):0;
+  const pcEquipe=metaEquipe>0?Math.round(totalFrent/metaEquipe*100):0;
+  const naMetaCount=(state.frentistas||[]).filter(f=>f.ativo&&porFrent[f.id]>=(meta.frentistas?.[f.id]||0)&&porFrent[f.id]>0).length;
+  return {totalPosto,totalFrent,totalOutras,porFrent,metaPosto:meta.posto,metaEquipe,pcPosto,pcEquipe,naMetaCount,metaFrent:meta.frentistas||{}};
+}
+
+function pct(v){return Math.min(100,Math.max(0,v));}
+function progBar(pc){
+  const c=pc>=100?'#2E7D32':pc>=70?'#B45309':'#B91C1C';
+  return `<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;"><div style="width:${pct(pc)}%;height:100%;background:${c};border-radius:99px;"></div></div><span style="font-size:12px;font-family:'DM Mono',monospace;min-width:36px;color:${c};">${pc}%</span></div>`;
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+window.renderDash = function() {
+  const meses=getMeses(), sel=document.getElementById('dash-mes');
+  const curVal=sel.value;
+  sel.innerHTML=meses.map(m=>`<option value="${m}"${m===curVal?' selected':''}>${mesLabel(m)}</option>`).join('');
+  if(!sel.value&&meses.length) sel.value=meses.includes(getMesAtual())?getMesAtual():meses[meses.length-1];
+  const mk=sel.value; if(!mk) return;
+  const d=calcMes(mk);
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="metric"><div class="mlabel">Total posto</div><div class="mval">${d.totalPosto}</div><div class="msub">meta: ${d.metaPosto}</div></div>
+    <div class="metric"><div class="mlabel">% meta posto</div><div class="mval ${d.pcPosto>=100?'green':d.pcPosto>=70?'amber':'red'}">${d.pcPosto}%</div></div>
+    <div class="metric"><div class="mlabel">Vendas equipe</div><div class="mval blue">${d.totalFrent}</div><div class="msub">meta: ${d.metaEquipe}</div></div>
+    <div class="metric"><div class="mlabel">% meta equipe</div><div class="mval ${d.pcEquipe>=100?'green':d.pcEquipe>=70?'amber':'red'}">${d.pcEquipe}%</div></div>`;
+  document.getElementById('posto-prog').innerHTML=`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>${d.totalPosto} trocas</span><span style="color:var(--muted)">meta ${d.metaPosto}</span></div>${progBar(d.pcPosto)}<div style="font-size:12px;color:var(--muted);margin-top:8px;">Outras origens: <strong>${d.totalOutras}</strong> · Frentistas: <strong>${d.totalFrent}</strong></div>`;
+  document.getElementById('equipe-prog').innerHTML=`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>${d.totalFrent} trocas</span><span style="color:var(--muted)">meta ${d.metaEquipe}</span></div>${progBar(d.pcEquipe)}<div style="font-size:12px;color:var(--muted);margin-top:8px;">Frentistas na meta: <strong>${d.naMetaCount}</strong> de ${getAtivos().length}</div>`;
+  const rows=getAtivos().map(f=>{const real=d.porFrent[f.id]||0,meta=d.metaFrent[f.id]||0,pc=meta>0?Math.round(real/meta*100):0,falta=Math.max(0,meta-real),sit=real===0?'<span class="badge badge-red">Sem vendas</span>':pc>=100?'<span class="badge badge-green">Na meta ✓</span>':`<span class="badge badge-amber">${pc}%</span>`;return `<tr><td><div style="display:flex;align-items:center;gap:8px;"><div class="avatar">${f.nome[0]}</div>${f.nome}</div></td><td style="font-family:'DM Mono',monospace;">${meta}</td><td style="font-family:'DM Mono',monospace;font-weight:500;">${real}</td><td style="min-width:120px;">${progBar(pc)}</td><td>${sit}</td><td style="font-family:'DM Mono',monospace;color:var(--muted);">${falta>0?falta:'—'}</td></tr>`;}).join('');
+  document.getElementById('dash-frentistas').innerHTML=`<thead><tr><th>Frentista</th><th>Meta</th><th>Realizado</th><th>Atingimento</th><th>Situação</th><th>Faltam</th></tr></thead><tbody>${rows}</tbody>`;
+  const lancs=getLancMes(mk),dias=Object.keys(lancs).sort();
+  let acum=0; const labels=[],dataAcum=[];
+  dias.forEach(d2=>{const dia=lancs[d2];let tot=dia.outras||0;(state.frentistas||[]).forEach(f=>{tot+=dia.frentistas?.[f.id]||0;});acum+=tot;labels.push(d2.slice(8));dataAcum.push(acum);});
+  if(chartAcum) chartAcum.destroy();
+  const canvasEl = document.getElementById('chart-acum');
+  if(labels.length>0){
+    chartAcum=new Chart(canvasEl,{type:'line',data:{labels,datasets:[{label:'Acumulado posto',data:dataAcum,borderColor:'#C8521A',backgroundColor:'rgba(200,82,26,0.08)',tension:0.3,fill:true,pointRadius:3},{label:'Meta posto',data:labels.map(()=>d.metaPosto),borderColor:'#D8D4CB',borderDash:[5,4],pointRadius:0,tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:12}}}},scales:{y:{beginAtZero:true},x:{ticks:{autoSkip:true,maxTicksLimit:15}}}}});
+  } else {
+    canvasEl.parentElement.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px;">Nenhum lançamento neste mês ainda.</div>';
+  }
+}
+
+// ─── LANÇAMENTO ───────────────────────────────────────────────────────────────
+window.renderLancForm = function() {
+  const mk=document.getElementById('l-mes').value, ativos=getAtivos();
+  document.getElementById('l-frentistas-grid').innerHTML=ativos.map(f=>`<div class="fg"><label>${f.nome.toUpperCase()}</label><input type="number" id="lf-${f.id}" min="0" value="0" /></div>`).join('');
+  renderLancTabela(mk);
+}
+
+function renderLancTabela(mk) {
+  const lancs=getLancMes(mk),dias=Object.keys(lancs).sort().reverse(),ativos=getAtivos();
+  document.getElementById('l-resumo-title').textContent=`Lançamentos — ${mesLabel(mk)}`;
+  if(!dias.length){document.getElementById('l-tabela').innerHTML='<tr><td colspan="20" style="text-align:center;color:var(--muted);padding:20px;">Nenhum lançamento ainda.</td></tr>';return;}
+  const thead=`<thead><tr><th>Data</th>${ativos.map(f=>`<th>${f.nome}</th>`).join('')}<th>Outras</th><th>Total</th><th></th></tr></thead>`;
+  const tbody=dias.map(data=>{
+    const dia=lancs[data]; let tot=dia.outras||0;
+    const cells=ativos.map(f=>{const v=dia.frentistas?.[f.id]||0;tot+=v;return `<td style="font-family:'DM Mono',monospace;text-align:center;">${v}</td>`;}).join('');
+    return `<tr><td style="font-family:'DM Mono',monospace;">${data.split('-').reverse().join('/')}</td>${cells}<td style="font-family:'DM Mono',monospace;text-align:center;">${dia.outras||0}</td><td style="font-family:'DM Mono',monospace;font-weight:600;text-align:center;">${tot}</td><td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="editarDia('${mk}','${data}')">✏️</button> <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="excluirDia('${mk}','${data}')">🗑</button></td></tr>`;
+  }).join('');
+  document.getElementById('l-tabela').innerHTML=thead+`<tbody>${tbody}</tbody>`;
+}
+
+window.salvarLancamento = async function() {
+  const mk=document.getElementById('l-mes').value, data=document.getElementById('l-data').value;
+  if(!mk||!data){showLMsg('Selecione mês e data.','err');return;}
+  const ativos=getAtivos(), frentistas={};
+  ativos.forEach(f=>{const el=document.getElementById(`lf-${f.id}`);frentistas[f.id]=parseInt(el?.value||0)||0;});
+  const outras=parseInt(document.getElementById('l-outras').value)||0;
+  if(!state.lancamentos) state.lancamentos={};
+  if(!state.lancamentos[mk]) state.lancamentos[mk]={};
+  state.lancamentos[mk][data]={frentistas,outras};
+  await saveState();
+  showLMsg(`✓ Lançamento de ${data.split('-').reverse().join('/')} salvo!`,'ok');
+  renderLancTabela(mk);
+}
+
+window.limparLanc = function() {
+  getAtivos().forEach(f=>{const el=document.getElementById(`lf-${f.id}`);if(el)el.value=0;});
+  document.getElementById('l-outras').value=0;
+  document.getElementById('l-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('l-msg').innerHTML='';
+}
+
+function showLMsg(txt,tipo){const el=document.getElementById('l-msg');el.className='msg '+tipo;el.textContent=txt;if(tipo==='ok')setTimeout(()=>{el.innerHTML='';el.className='';},4000);}
+
+window.editarDia = function(mk,data) {
+  const dia=(state.lancamentos||{})[mk]?.[data]; if(!dia) return;
+  document.getElementById('l-mes').value=mk; renderLancForm();
+  document.getElementById('l-data').value=data;
+  getAtivos().forEach(f=>{const el=document.getElementById(`lf-${f.id}`);if(el)el.value=dia.frentistas?.[f.id]||0;});
+  document.getElementById('l-outras').value=dia.outras||0;
+  window.scrollTo(0,0);
+}
+
+window.excluirDia = async function(mk,data) {
+  if(!confirm(`Excluir lançamento de ${data.split('-').reverse().join('/')}?`)) return;
+  delete state.lancamentos[mk][data];
+  await saveState(); renderLancTabela(mk);
+}
+
+// ─── HISTÓRICO ────────────────────────────────────────────────────────────────
+window.renderHistorico = function() {
+  const meses=getMeses(),ativos=getAtivos();
+  const rowsPosto=meses.map(mk=>{const d=calcMes(mk);return `<tr><td>${mesLabel(mk)}</td><td style="font-family:'DM Mono',monospace;">${d.totalFrent}</td><td style="font-family:'DM Mono',monospace;">${d.totalOutras}</td><td style="font-family:'DM Mono',monospace;font-weight:500;">${d.totalPosto}</td><td style="font-family:'DM Mono',monospace;">${d.metaPosto}</td><td>${progBar(d.pcPosto)}</td><td style="font-family:'DM Mono',monospace;">${d.metaEquipe}</td><td>${progBar(d.pcEquipe)}</td></tr>`;}).join('');
+  document.getElementById('hist-posto').innerHTML=`<thead><tr><th>Mês</th><th>Vend. frentistas</th><th>Outras origens</th><th>Total posto</th><th>Meta posto</th><th>% Meta posto</th><th>Meta equipe</th><th>% Meta equipe</th></tr></thead><tbody>${rowsPosto}</tbody>`;
+  const rowsFrent=meses.map(mk=>{const d=calcMes(mk);return `<tr><td>${mesLabel(mk)}</td>${ativos.map(f=>`<td style="font-family:'DM Mono',monospace;text-align:center;">${d.porFrent[f.id]||0}</td>`).join('')}<td style="font-family:'DM Mono',monospace;font-weight:500;text-align:center;">${d.totalFrent}</td></tr>`;}).join('');
+  document.getElementById('hist-frent').innerHTML=`<thead><tr><th>Mês</th>${ativos.map(f=>`<th style="text-align:center;">${f.nome}</th>`).join('')}<th style="text-align:center;">Total</th></tr></thead><tbody>${rowsFrent}</tbody>`;
+  const labels=meses.map(mk=>mesLabel(mk).substring(0,3)+' '+mk.split('-')[0].slice(2));
+  const totais=meses.map(mk=>calcMes(mk).totalPosto), metas_=meses.map(mk=>(state.metas[mk]||{}).posto||0);
+  if(chartHist) chartHist.destroy();
+  chartHist=new Chart(document.getElementById('chart-hist'),{type:'bar',data:{labels,datasets:[{label:'Total posto',data:totais,backgroundColor:'rgba(200,82,26,0.7)',borderColor:'#C8521A',borderWidth:1},{label:'Meta posto',data:metas_,type:'line',borderColor:'#1E40AF',borderDash:[5,4],pointRadius:3,tension:0,borderWidth:2,backgroundColor:'transparent'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:12}}}},scales:{y:{beginAtZero:true}}}});
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+window.renderConfig = function() {
+  document.getElementById('conf-frentistas-list').innerHTML=(state.frentistas||[]).map((f,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:.5px solid var(--border);"><div class="avatar">${f.nome[0]}</div><span style="flex:1;font-size:14px;">${f.nome}</span><span class="chip">${f.ativo?'Ativo':'Inativo'}</span><button class="btn btn-ghost btn-sm" onclick="toggleFrent(${i})">${f.ativo?'Desativar':'Ativar'}</button><button class="btn btn-ghost btn-sm" onclick="editFrent(${i})">✏️ Editar</button></div>`).join('');
+  renderMetasTbl();
+}
+
+function renderMetasTbl() {
+  const meses=getMeses(),ativos=state.frentistas||[];
+  const rows=meses.map(mk=>{const m=(state.metas||{})[mk]||{posto:0,frentistas:{}};const equipe=ativos.reduce((s,f)=>s+(m.frentistas?.[f.id]||0),0);return `<tr><td style="white-space:nowrap;">${mesLabel(mk)}</td><td><input type="number" value="${m.posto||0}" min="0" style="width:70px;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;" onchange="updateMeta('${mk}','posto',this.value)" /></td>${ativos.map(f=>`<td><input type="number" value="${m.frentistas?.[f.id]||0}" min="0" style="width:55px;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;" onchange="updateMeta('${mk}','frent_${f.id}',this.value)" /></td>`).join('')}<td style="font-family:'DM Mono',monospace;text-align:center;font-weight:500;">${equipe}</td></tr>`;}).join('');
+  const headers=['Mês','Meta posto',...ativos.map(f=>f.nome),'Meta equipe'];
+  document.getElementById('conf-metas-tbl').innerHTML=`<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
+}
+
+window.updateMeta = async function(mk,campo,val) {
+  if(!state.metas) state.metas={};
+  if(!state.metas[mk]) state.metas[mk]={posto:0,frentistas:{}};
+  if(campo==='posto'){state.metas[mk].posto=parseInt(val)||0;}
+  else{const fid=campo.replace('frent_','');if(!state.metas[mk].frentistas)state.metas[mk].frentistas={};state.metas[mk].frentistas[fid]=parseInt(val)||0;}
+  await saveState(); renderMetasTbl();
+}
+
+window.toggleFrent = async function(i) { (state.frentistas||[])[i].ativo=!(state.frentistas||[])[i].ativo; await saveState(); renderConfig(); }
+window.editFrent = async function(i) { const n=prompt('Novo nome:',(state.frentistas||[])[i].nome); if(!n||!n.trim()) return; (state.frentistas||[])[i].nome=n.trim(); await saveState(); renderConfig(); }
+
+window.addFrentista = async function() {
+  const nome=document.getElementById('novo-frent-nome').value.trim(); if(!nome) return;
+  const id=Date.now().toString();
+  if(!state.frentistas) state.frentistas=[];
+  state.frentistas.push({id,nome,ativo:true});
+  getMeses().forEach(mk=>{if(!state.metas[mk])state.metas[mk]={posto:0,frentistas:{}};if(!state.metas[mk].frentistas)state.metas[mk].frentistas={};state.metas[mk].frentistas[id]=0;});
+  await saveState();
+  document.getElementById('novo-frent-nome').value='';
+  document.getElementById('conf-frent-msg').textContent=`✓ ${nome} adicionado.`;
+  setTimeout(()=>document.getElementById('conf-frent-msg').textContent='',3000);
+  renderConfig();
+}
+
+window.adicionarMes = async function() {
+  const ano=document.getElementById('novo-mes-ano').value, num=document.getElementById('novo-mes-num').value;
+  if(!ano||!num) return;
+  const mk=`${ano}-${num}`;
+  if(!state.metas) state.metas={};
+  if(state.metas[mk]){document.getElementById('novo-mes-msg').textContent='Este mês já existe.';return;}
+  const frentistas={};
+  (state.frentistas||[]).forEach(f=>{frentistas[f.id]=0;});
+  state.metas[mk]={posto:0,frentistas};
+  await saveState();
+  document.getElementById('novo-mes-msg').textContent=`✓ ${mesLabel(mk)} adicionado.`;
+  setTimeout(()=>document.getElementById('novo-mes-msg').textContent='',3000);
+  populateMesSelects(); renderConfig();
+}
+
+function populateMesSelects() {
+  const meses=getMeses();
+  ['dash-mes','l-mes'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const cur=el.value;
+    el.innerHTML=meses.map(m=>`<option value="${m}"${m===cur?' selected':''}>${mesLabel(m)}</option>`).join('');
+    if(!el.value&&meses.length) el.value=meses.includes(getMesAtual())?getMesAtual():meses[meses.length-1];
+  });
+}
+
+window.showTab = function(tab) {
+  ['dash','lancamento','historico','config'].forEach(t=>{
+    document.getElementById('sec-'+t).classList.toggle('active',t===tab);
+    document.getElementById('tab-'+t+'-btn').classList.toggle('active',t===tab);
+  });
+  populateMesSelects();
+  if(tab==='dash') renderDash();
+  if(tab==='lancamento') renderLancForm();
+  if(tab==='historico') renderHistorico();
+  if(tab==='config') renderConfig();
+}
+</script>
+</body>
+</html>
