@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM — Placar Frentistas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F3EE; --surface: #FFFFFF; --border: #D8D4CB;
+  --text: #1A1916; --muted: #7A776F;
+  --accent: #C8521A; --accent-dark: #9E3D10;
+  --green: #2E7D32; --green-light: #E8F5E9;
+  --amber: #B45309; --amber-light: #FEF3C7;
+  --red: #B91C1C; --red-light: #FEE2E2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+#loading { position: fixed; inset: 0; background: var(--bg); z-index: 99; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+#loading.hidden { display: none; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.header { background: var(--text); color: #fff; padding: 0 20px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.logo span { background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-family: 'DM Mono', monospace; }
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.mes-label { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500; }
+.atualizado { font-size: 11px; color: rgba(255,255,255,0.4); font-family: 'DM Mono', monospace; }
+
+.main { max-width: 500px; margin: 0 auto; padding: 20px 16px; }
+
+/* CARDS DE PROGRESSO GERAL */
+.resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.resumo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.resumo-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.resumo-val { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; }
+.resumo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* PLACAR */
+.placar-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+.frent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 10px; position: relative; overflow: hidden; }
+.frent-card.meta { border-color: var(--green); background: var(--green-light); }
+.frent-card.alerta { border-color: #F59E0B; background: #FFFBEB; }
+.frent-card.sem { border-color: var(--border); }
+
+.frent-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0; }
+.avatar.meta { background: var(--green); color: #fff; }
+.avatar.alerta { background: #F59E0B; color: #fff; }
+.avatar.sem { background: #E5E7EB; color: var(--muted); }
+
+.frent-info { flex: 1; }
+.frent-nome { font-size: 15px; font-weight: 600; }
+.frent-nums { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+.badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; font-family: 'DM Mono', monospace; }
+.badge-green { background: var(--green); color: #fff; }
+.badge-amber { background: #F59E0B; color: #fff; }
+.badge-red { background: #E5E7EB; color: var(--muted); }
+
+.prog-wrap { display: flex; align-items: center; gap: 8px; }
+.prog-bar { flex: 1; height: 8px; background: rgba(0,0,0,0.08); border-radius: 99px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 99px; transition: width 0.5s; }
+.prog-fill.meta { background: var(--green); }
+.prog-fill.alerta { background: #F59E0B; }
+.prog-fill.sem { background: #D1D5DB; }
+.prog-pct { font-size: 12px; font-family: 'DM Mono', monospace; font-weight: 600; min-width: 36px; text-align: right; }
+.prog-pct.meta { color: var(--green); }
+.prog-pct.alerta { color: #B45309; }
+.prog-pct.sem { color: var(--muted); }
+
+.falta-txt { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.falta-txt strong { color: var(--text); }
+
+/* RANKING */
+.rank-num { position: absolute; top: 12px; right: 14px; font-size: 28px; font-weight: 700; font-family: 'DM Mono', monospace; color: rgba(0,0,0,0.06); line-height: 1; }
+
+.empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+
+.footer { text-align: center; font-size: 12px; color: var(--muted); padding: 20px; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:var(--muted)">Carregando placar...</div>
+</div>
+
+<div class="header">
+  <div class="logo">ACM <span>PLACAR</span></div>
+  <div class="header-right">
+    <div class="mes-label" id="mes-label">—</div>
+    <div class="atualizado" id="atualizado">—</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="resumo" id="resumo"></div>
+  <div class="placar-title">Desempenho individual</div>
+  <div id="placar-list"></div>
+  <div class="footer">Atualiza automaticamente a cada 60 segundos</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9pJPppo2_-CFuoGYDkUAIATRqhfb_gDU",
+  authDomain: "acm-crm-d20a4.firebaseapp.com",
+  projectId: "acm-crm-d20a4",
+  storageBucket: "acm-crm-d20a4.firebasestorage.app",
+  messagingSenderId: "119604708875",
+  appId: "1:119604708875:web:90acd436e09784c2ee290e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db_fs = getFirestore(app);
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function getMesAtual() {
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}`;
+}
+
+function mesLabel(key) {
+  const [y,m] = key.split('-');
+  return `${MESES[+m-1]} ${y}`;
+}
+
+function pct(v) { return Math.min(100, Math.max(0, v)); }
+
+async function render() {
+  try {
+    const snap = await getDoc(doc(db_fs, 'metas', 'state'));
+    if (!snap.exists()) { document.getElementById('loading').classList.add('hidden'); return; }
+    const state = snap.data();
+    const mk = getMesAtual();
+    const meta = (state.metas||{})[mk] || { posto: 0, frentistas: {} };
+    const lancs = (state.lancamentos||{})[mk] || {};
+    const frentistas = (state.frentistas||[]).filter(f => f.ativo);
+
+    // calcular por frentista
+    const porFrent = {};
+    frentistas.forEach(f => { porFrent[f.id] = 0; });
+    Object.values(lancs).forEach(dia => {
+      frentistas.forEach(f => { porFrent[f.id] += dia.frentistas?.[f.id] || 0; });
+    });
+
+    // totais
+    let totalFrent = 0, totalOutras = 0;
+    frentistas.forEach(f => { totalFrent += porFrent[f.id]; });
+    Object.values(lancs).forEach(dia => { totalOutras += dia.outras || 0; });
+    const totalPosto = totalFrent + totalOutras;
+    const metaEquipe = Object.values(meta.frentistas||{}).reduce((a,b)=>a+b,0);
+    const pcEquipe = metaEquipe > 0 ? Math.round(totalFrent/metaEquipe*100) : 0;
+    const pcPosto = meta.posto > 0 ? Math.round(totalPosto/meta.posto*100) : 0;
+    const naMeta = frentistas.filter(f => porFrent[f.id] >= (meta.frentistas?.[f.id]||0) && porFrent[f.id] > 0).length;
+
+    // header
+    document.getElementById('mes-label').textContent = mesLabel(mk);
+    document.getElementById('atualizado').textContent = 'Atualizado ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+
+    // resumo
+    const corPosto = pcPosto>=100?'var(--green)':pcPosto>=70?'var(--amber)':'var(--red)';
+    const corEquipe = pcEquipe>=100?'var(--green)':pcEquipe>=70?'var(--amber)':'var(--red)';
+    document.getElementById('resumo').innerHTML = `
+      <div class="resumo-card">
+        <div class="resumo-label">Meta do posto</div>
+        <div class="resumo-val" style="color:${corPosto}">${pcPosto}%</div>
+        <div class="resumo-sub">${totalPosto} de ${meta.posto} trocas</div>
+      </div>
+      <div class="resumo-card">
+        <div class="resumo-label">Meta da equipe</div>
+        <div class="resumo-val" style="color:${corEquipe}">${pcEquipe}%</div>
+        <div class="resumo-sub">${naMeta} de ${frentistas.length} na meta</div>
+      </div>`;
+
+    // ordenar por realizado desc
+    const sorted = [...frentistas].sort((a,b) => (porFrent[b.id]||0) - (porFrent[a.id]||0));
+
+    document.getElementById('placar-list').innerHTML = sorted.map((f, idx) => {
+      const real = porFrent[f.id] || 0;
+      const metaF = meta.frentistas?.[f.id] || 0;
+      const pc = metaF > 0 ? Math.round(real/metaF*100) : 0;
+      const falta = Math.max(0, metaF - real);
+      const tipo = real === 0 ? 'sem' : pc >= 100 ? 'meta' : 'alerta';
+      const badgeHtml = real === 0
+        ? '<span class="badge badge-red">Sem vendas</span>'
+        : pc >= 100
+        ? '<span class="badge badge-green">✓ Na meta</span>'
+        : `<span class="badge badge-amber">${pc}%</span>`;
+      const faltaTxt = falta > 0 ? `<div class="falta-txt">Faltam <strong>${falta}</strong> ${falta===1?'troca':'trocas'} para a meta</div>` : '';
+      return `
+        <div class="frent-card ${tipo}">
+          <div class="rank-num">${idx+1}</div>
+          <div class="frent-top">
+            <div class="avatar ${tipo}">${f.nome[0]}</div>
+            <div class="frent-info">
+              <div class="frent-nome">${f.nome}</div>
+              <div class="frent-nums">${real} realizadas · meta ${metaF}</div>
+            </div>
+            ${badgeHtml}
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill ${tipo}" style="width:${pct(pc)}%"></div></div>
+            <div class="prog-pct ${tipo}">${pc}%</div>
+          </div>
+          ${faltaTxt}
+        </div>`;
+    }).join('');
+
+    document.getElementById('loading').classList.add('hidden');
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('placar-list').innerHTML = '<div class="empty">Erro ao carregar dados.</div>';
+  }
+}
+
+render();
+setInterval(render, 60000);
+</script>
+</body>
+</html>
